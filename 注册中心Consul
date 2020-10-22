@@ -1,0 +1,143 @@
+#### Consul
+
+```markdown
+# 0.consul 简介
+- https://www.consul.io
+- consul是一个可以提供服务发现，健康检查，多数据中心，Key/Value存储等功能的分布式服务框架，用于实现分布式系统的服务发现与配置。与其他分布式服务注册与发现的方案，使用起来也较为简单。Consul用Golang实现，因此具有天然可移植性(支持Linux、Windows和Mac OS X)；安装包仅包含一个可执行文件，方便部署。
+```
+
+##### 安装consul
+
+```markdown
+# 1.下载consul
+- https://www.consul.io/downloads
+```
+
+![image-20200710103539186](./IMG.assets/SpringCloud.assets/image-20200710103539186.png)
+
+![image-20200710104357091](./IMG.assets/SpringCloud.assets/image-20200710104357091.png)
+
+```markdown
+# 2.安装consul
+- 官方安装视频地址: https://learn.hashicorp.com/consul/getting-started/install.html
+- 1.解压之后发现consul只有一个脚本文件
+```
+
+![image-20200710105007805](./IMG.assets/SpringCloud.assets/image-20200710105007805.png)
+
+```markdown
+# 3.根据解压缩目录配置环境变量
+- 根据安装目录进行环境变量配置 [这里是macos和linux系统配置]
+```
+
+![image-20200710105305439](./IMG.assets/SpringCloud.assets/image-20200710105305439.png)
+
+```markdown
+# 4.查看consul环境变量是否配置成功,执行命令出现如下信息代表成功
+- consul -v
+```
+
+![image-20200710105449741](./IMG.assets/SpringCloud.assets/image-20200710105449741.png)
+
+```markdown
+# 5.启动consul服务
+- consul agent -dev
+```
+
+![image-20200710105654356](./IMG.assets/SpringCloud.assets/image-20200710105654356.png)
+
+```markdown
+# 6.访问consul的web服务端口
+- http://localhost:8500
+	`consul默认服务端口是8500
+```
+
+![image-20200710105912943](./IMG.assets/SpringCloud.assets/image-20200710105912943.png)
+
+##### 开发consul客户端 - 即微服务
+
+```markdown
+# 1.创建项目并引入consul客户端依赖
+```
+
+```xml
+ <!--引入consul依赖-->
+<dependency>
+  <groupId>org.springframework.cloud</groupId>
+  <artifactId>spring-cloud-starter-consul-discovery</artifactId>
+</dependency>
+```
+
+```markdown
+# 2.编写properties配置
+```
+
+```properties
+server.port=8889
+spring.application.name=consulclient8889
+spring.cloud.consul.host=localhost											# 注册consul服务的主机
+spring.cloud.consul.port=8500												# 注册consul服务的端口号（默认8500）
+spring.cloud.consul.discovery.service-name=${spring.application.name}		# 指定注册的服务名称 默认就是应用名
+```
+
+```markdown
+# 3.启动服务查看consul界面服务信息
+```
+
+![image-20200713135359150](./IMG.assets/SpringCloud.assets/image-20200713135359150.png)
+
+##### consul 开启健康监控检查
+
+```markdown
+# 1.开启consul健康监控
+- 默认情况加consul监控健康是开启的,但是必须依赖健康监控依赖才能正确监控健康状态所以直接启动会显示错误,引入健康监控依赖之后服务正常
+```
+
+```xml
+<!-- 这个包是用做健康度监控的-->
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+
+![image-20200713140146813](./IMG.assets/SpringCloud.assets/image-20200713140146813.png)
+
+##### consul 关闭健康监控检查
+
+```properties
+server.port=8889
+spring.application.name=consulclient8889
+spring.cloud.consul.host=localhost
+spring.cloud.consul.port=8500
+spring.cloud.consul.discovery.service-name=${spring.application.name}
+spring.cloud.consul.discovery.register-health-check=false	    			# 关闭consul服务的健康检查[不推荐]
+```
+
+![image-20200710121728014](./IMG.assets/SpringCloud.assets/image-20200710121728014.png)
+
+### 不同注册中心区别
+
+```markdown
+# 1.CAP定理     服务注册中心集群 node1   node2  node3    ...   eureka(AP)   consul zk(CP)
+
+- CAP定理：CAP定理又称CAP原则，指的是在一个分布式系统中，一致性（Consistency）、可用性（Availability）、分区容错性（Partition tolerance）。CAP 原则指的是，这三个要素最多只能同时实现两点，不可能三者兼顾。
+	`一致性（C）：在分布式系统中的所有数据备份，在同一时刻是否同样的值。（等同于所有节点访问同一份最新的数据副本）
+	`可用性（A）：在集群中一部分节点故障后，集群整体是否还能响应客户端的读写请求。（对数据更新具备高可用性）
+	`分区容忍性（P），就是高可用性，一个节点崩了，并不影响其它的节点（100个节点，挂了几个，不影响服务，越多机器越好）
+	
+# 2.Eureka特点  
+- Eureka中没有使用任何的数据强一致性算法保证不同集群间的Server的数据一致，仅通过数据拷贝的方式争取注册中心数据的最终一致性，虽然放弃数据强一致性但是换来了Server的可用性，降低了注册的代价，提高了集群运行的健壮性。
+
+# 3.Consul特点
+- 基于Raft算法，Consul提供强一致性的注册中心服务，但是由于Leader节点承担了所有的处理工作，势必加大了注册和发现的代价，降低了服务的可用性。通过Gossip协议，Consul可以很好地监控Consul集群的运行，同时可以方便通知各类事件，如Leader选择发生、Server地址变更等。
+
+# 4.zookeeper特点
+- 基于Zab协议，Zookeeper可以用于构建具备数据强一致性的服务注册与发现中心，而与此相对地牺牲了服务的可用性和提高了注册需要的时间。  
+```
+
+![image-20200710135837525](./IMG.assets/SpringCloud.assets/image-20200710135837525.png)
+
+----
+
+## 
